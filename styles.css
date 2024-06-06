@@ -13,7 +13,7 @@ body {
   .highlight-palette {
     display: none;
     position: absolute;
-    background: white;
+    background: black;
     border: 1px solid #ccc;
     padding: 5px;
     border-radius: 3px;
@@ -27,6 +27,7 @@ body {
     border: none;
     margin: 2px;
     cursor: pointer;
-    border-radius: 3px;
+    border-radius: 5px;
   }
+
   
