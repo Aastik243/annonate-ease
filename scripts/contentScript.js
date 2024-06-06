@@ -1,17 +1,4 @@
-// document.addEventListener('DOMContentLoaded', function() {
-//     // Create and append the highlight palette to the body
-//     const palette = document.createElement('div');
-//     palette.id = 'highlight-palette';
-//     palette.className = 'highlight-palette';
-//     palette.innerHTML = `
-//       <button onclick="highlightText('yellow')" style="background-color: yellow;"></button>
-//       <button onclick="highlightText('green')" style="background-color: green;"></button>
-//       <button onclick="highlightText('blue')" style="background-color: blue;"></button>
-//       <button onclick="highlightText('red')" style="background-color: red;"></button>
-//       <button onclick="highlightText('pink')" style="background-color: pink;"></button>
-//     `;
-//     document.body.appendChild(palette);
-//   });
+
     const palette = document.createElement('div');
     palette.id = 'highlight-palette';
     palette.className = 'highlight-palette';
@@ -22,6 +9,9 @@
       <button id="redButton" style="background-color: red;"></button>
       <button id="pinkButton" style="background-color: pink;"></button>
     `;
+
+    let isShiftPressed = false;
+
 
     
 
@@ -37,9 +27,22 @@
       } else if (event.target.matches('#pinkButton')) {
         highlightText('pink');
       }
+       
+    });
+
+    document.addEventListener('click', (event) => {
+      if (event.target.id === 'delete-button') {
+        const note = event.target.closest('.note-page');
+        if (note) {
+          note.remove();
+          event.stopPropagation(); // Stop event propagation to prevent recreation of the note
+        }
+      }
     });
   
     document.body.appendChild(palette);
+
+    
 
 document.addEventListener('mouseup', function() {
     const selection = window.getSelection();
@@ -58,9 +61,39 @@ document.addEventListener('mouseup', function() {
       palette.style.display = 'none';
     }
   });
+
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Shift') {
+      isShiftPressed = true;
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (isShiftPressed) {
+
+     const note = document.createElement('div');
+    note.id = 'note-page';
+    note.className = 'note-page';
+    note.innerHTML = `
+        <div class="header">
+          <button id="delete-button">X</button>
+        </div>
+        <textarea></textarea>
+    `;
+
+     note.style.display = 'block';
+     note.style.top = `${event.clientY}px`;
+     note.style.left = `${event.clientX}px`;
+
+     document.body.appendChild(note);
+
+     isShiftPressed = false;
+    }
+  });
   
   function highlightText(color) {
-    // console.log("I am clicked");
+   
     const selection = window.getSelection();
     if (selection.rangeCount) {
       const range = selection.getRangeAt(0);
@@ -68,14 +101,21 @@ document.addEventListener('mouseup', function() {
       span.style.backgroundColor = color;
       range.surroundContents(span);
     }
-   // const elementToRemove = document.getElementById('highlight-palette');
-
-    // if(elementToRemove){
-    // elementToRemove.remove();
-    // }
+   
     palette.style.display = 'none';
   }
   
+  
+
+  function handleDelete() {
+    const note = event.target.closest('.note-page');
+    if (note) {
+      note.remove();
+      event.stopPropagation(); 
+    }
+  }
+
+
   function call(){
     alert("Hello");
   }
