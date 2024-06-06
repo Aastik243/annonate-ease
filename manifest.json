@@ -1,0 +1,22 @@
+{
+    "manifest_version": 3,
+    "name": "AnnotateEase",
+    "version": "1.0.0",
+    "description": "Used for annotating webpages",
+    "permissions": ["activeTab", "contextMenus", "storage", "tabs"],
+    "host_permissions": ["<all_urls>"],
+    "content_scripts": [
+      {
+        "matches": ["*://*/*"],
+        "js": ["scripts/contentScript.js"],
+        "css":["styles.css"]
+        
+        
+      }
+    ],
+    "action": {
+      "default_title": "AnnotateEase",
+      "default_popup": "popup.html"
+    }
+  }
+  
