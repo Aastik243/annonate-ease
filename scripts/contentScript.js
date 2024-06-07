@@ -13,26 +13,26 @@ const palette = document.createElement('div');
 
 
   // Load highlights and notes from storage
-chrome.storage.local.get(['highlights', 'notes'], (result) => {
-  const storedHighlights = result.highlights || [];
-  const storedNotes = result.notes || [];
+// chrome.storage.local.get(['highlights', 'notes'], (result) => {
+//   const storedHighlights = result.highlights || [];
+//   const storedNotes = result.notes || [];
   
-  // Apply stored highlights
-  storedHighlights.forEach(highlight => {
-    const range = document.createRange();
-    range.setStart(highlight.startContainer, highlight.startOffset);
-    range.setEnd(highlight.endContainer, highlight.endOffset);
+//   // Apply stored highlights
+//   storedHighlights.forEach(highlight => {
+//     const range = document.createRange();
+//     range.setStart(highlight.startContainer, highlight.startOffset);
+//     range.setEnd(highlight.endContainer, highlight.endOffset);
     
-    const span = document.createElement('span');
-    span.style.backgroundColor = highlight.color;
-    range.surroundContents(span);
-  });
+//     const span = document.createElement('span');
+//     span.style.backgroundColor = highlight.color;
+//     range.surroundContents(span);
+//   });
   
-  // Apply stored notes
-  storedNotes.forEach(note => {
-    createNoteElement(note);
-  });
-});
+//   // Apply stored notes
+//   storedNotes.forEach(note => {
+//     createNoteElement(note);
+//   });
+// });
 
 
     
@@ -95,6 +95,8 @@ document.addEventListener('mouseup', function() {
       palette.style.left = `${rect.left + window.scrollX}px`;
     
       palette.style.display = 'block';
+
+      
     
     } else {
       palette.style.display = 'none';
@@ -230,7 +232,42 @@ function removeNoteFromStorage(note) {
 // Restore notes when the page loads
 window.addEventListener("load", () => {
   restoreNotes();
+  restoreHighlights();
+
 });
+
+function saveHighlightToStorage(highlight) {
+  chrome.storage.local.get('highlights', (result) => {
+    const highlights = result.highlights || [];
+    highlights.push({
+      color: highlight.style.backgroundColor,
+      text: highlight.innerHTML,
+      parentPath: getElementPath(highlight.parentNode),// Save parent HTML
+      offset: Array.from(highlight.parentNode.childNodes).indexOf(highlight)
+    });
+    chrome.storage.local.set({ highlights }, () => {
+      console.log('Highlight saved:', highlights);
+    });
+  });
+  
+}
+
+function restoreHighlights() {
+  chrome.storage.local.get('highlights', (result) => {
+    const highlights = result.highlights || [];
+    highlights.forEach(highlight => {
+      const parent = getElementByPath(highlight.parentPath);
+      if (parent) {
+        const span = document.createElement('span');
+        span.style.backgroundColor = highlight.color;
+        span.innerHTML = highlight.text;
+        
+        const referenceNode = parent.childNodes[highlight.offset];
+        parent.insertBefore(span, referenceNode);
+      }
+    });
+  });
+}
 
 
   // document.addEventListener('click', (event) => {
@@ -263,7 +300,10 @@ window.addEventListener("load", () => {
       const range = selection.getRangeAt(0);
       const span = document.createElement('span');
       span.style.backgroundColor = color;
+      span.innerHTML = selection.toString();
       range.surroundContents(span);
+
+      saveHighlightToStorage(span);
     }
    
     palette.style.display = 'none';
@@ -280,6 +320,36 @@ window.addEventListener("load", () => {
   //   }
   // }
 
+  // Helper function to get the element path
+  function getElementPath(element) {
+    const path = [];
+    while (element && element !== document.body) {  // Ensure the loop stops at the body
+      const parent = element.parentNode;
+      const index = Array.from(parent.childNodes).indexOf(element);
+      path.unshift(index);
+      element = parent;
+    }
+    return path;
+  }
+
+// Helper function to get an element by its path
+function getElementByPath(path) {
+  if (!Array.isArray(path)) {
+    console.error('Invalid path:', path);
+    return null;
+  }
+  
+  let element = document.body;
+  for (const index of path) {
+    if (element.childNodes[index]) {
+      element = element.childNodes[index];
+    } else {
+      console.error('Invalid index in path:', index);
+      return null;  // Return null if the path is invalid
+    }
+  }
+  return element;
+}
 
   function call(){
     alert("Hello");
