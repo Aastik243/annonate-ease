@@ -44,7 +44,7 @@ body {
   background-color: #7CB9E8;
   }
 
-.header #delete-button{
+.header .delete-button{
   height: 20px;
   border: none;
   opacity: 0.5;
