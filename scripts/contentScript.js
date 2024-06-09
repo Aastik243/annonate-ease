@@ -12,31 +12,6 @@ const palette = document.createElement('div');
     let isShiftPressed = false;
 
 
-  // Load highlights and notes from storage
-// chrome.storage.local.get(['highlights', 'notes'], (result) => {
-//   const storedHighlights = result.highlights || [];
-//   const storedNotes = result.notes || [];
-  
-//   // Apply stored highlights
-//   storedHighlights.forEach(highlight => {
-//     const range = document.createRange();
-//     range.setStart(highlight.startContainer, highlight.startOffset);
-//     range.setEnd(highlight.endContainer, highlight.endOffset);
-    
-//     const span = document.createElement('span');
-//     span.style.backgroundColor = highlight.color;
-//     range.surroundContents(span);
-//   });
-  
-//   // Apply stored notes
-//   storedNotes.forEach(note => {
-//     createNoteElement(note);
-//   });
-// });
-
-
-    
-
     document.addEventListener('click', function(event) {
       if (event.target.matches('#yellowButton')) {
         highlightText('yellow');
@@ -350,6 +325,58 @@ function getElementByPath(path) {
   }
   return element;
 }
+
+
+
+
+// Listen for messages from the popup script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'exportToPDF') {
+    console.log("message received");
+   // Generate PDF
+    generatePDF()
+      .then(() => {
+        // Send success response
+        sendResponse({ success: true });
+      })
+      .catch(error => {
+        // Send error response
+        sendResponse({ success: false, error: error.message });
+      });
+    
+    // Indicate that sendResponse will be used asynchronously
+    return true;
+  }
+});
+
+// Function to generate PDF
+function generatePDF() {
+  return new Promise((resolve, reject) => {
+    // PDF generation logic
+    const element = document.body; // Select the whole body
+    const opt = {
+      margin: 1,
+      filename: 'webpage_with_notes.pdf',
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    // Use html2pdf to generate PDF from the current webpage
+    html2pdf().set(opt).from(element).save()
+      .then(() => {
+        // Resolve the promise on successful PDF generation
+        resolve();
+      })
+      .catch(error => {
+        // Reject the promise if PDF generation fails
+        reject(error);
+      });
+  });
+}
+
+
+  
 
   function call(){
     alert("Hello");

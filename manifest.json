@@ -3,7 +3,7 @@
     "name": "AnnotateEase",
     "version": "1.0.0",
     "description": "Used for annotating webpages",
-    "permissions": ["activeTab", "contextMenus", "storage", "tabs"],
+    "permissions": ["activeTab", "contextMenus","scripting", "storage", "tabs"],
     "host_permissions": ["<all_urls>"],
     "content_scripts": [
       {
