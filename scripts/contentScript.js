@@ -329,54 +329,107 @@ function getElementByPath(path) {
 
 
 
-// Listen for messages from the popup script
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === 'exportToPDF') {
-    console.log("message received");
-   // Generate PDF
-    generatePDF()
-      .then(() => {
-        // Send success response
-        sendResponse({ success: true });
-      })
-      .catch(error => {
-        // Send error response
-        sendResponse({ success: false, error: error.message });
-      });
-    
-    // Indicate that sendResponse will be used asynchronously
-    return true;
+chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
+  if (message.action === "convertToPDF") convertPageToPDF()
+})
+
+const scrollDownUntilEnd = () => {
+  function isAtPageEnd() {
+      return window.scrollY + window.innerHeight >= document.documentElement.scrollHeight
   }
-});
+  function scroll() {
+      const x = 0
+      const y = window.scrollY + window.innerHeight
 
-// Function to generate PDF
-function generatePDF() {
-  return new Promise((resolve, reject) => {
-    // PDF generation logic
-    const element = document.body; // Select the whole body
-    const opt = {
-      margin: 1,
-      filename: 'webpage_with_notes.pdf',
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    // Use html2pdf to generate PDF from the current webpage
-    html2pdf().set(opt).from(element).save()
-      .then(() => {
-        // Resolve the promise on successful PDF generation
-        resolve();
+      window.scrollTo({
+          top: y,
+          left: x,
       })
-      .catch(error => {
-        // Reject the promise if PDF generation fails
-        reject(error);
-      });
-  });
+      if (!isAtPageEnd()) {
+          scroll()
+      }
+  }
+  scroll()
 }
 
+const imageUrlToBase64 = (imgSrc) => {
+  return new Promise((resolve, reject) => {
+      // Fetch the image data as a Blob
+      fetch(imgSrc, { mode: 'cors' })
+          .then(response => {
+              if (!response.ok) {
+                  throw new Error('Network response was not ok');
+              }
+              return response.blob();
+          })
+          .then(blob => {
+              // Read the Blob as a data URL
+              const reader = new FileReader();
+              reader.onload = function() {
+                  resolve(reader.result);
+              };
+              reader.onerror = function() {
+                  resolve(imgSrc)
+              };
+              reader.readAsDataURL(blob);
+          })
+          .catch(error => {
+              resolve(imgSrc)
+          });
+  });
+};
 
-  
+const replaceImageSourcesWithBase64 = () => {
+  const images = document.querySelectorAll('img')
+  Array.from(images).forEach(async img => {
+      const newSource = imageUrlToBase64(img)
+      img.src = newSource
+      console.log('newSource', newSource)
+  })
+}
+
+const convertPageToPDF = async () => {
+  console.log("Converting page to PDF...")
+  const title = document.querySelector('title')
+  const { width } = document.body.getBoundingClientRect()
+
+  window.scrollTo(0, 0)
+  document.body.style.padding = '0 10px'
+
+  let imagenes = document.getElementsByTagName("img");
+  for (let i = 0; i < imagenes.length; i++) {
+      if(imagenes[i].src.includes('://')) {
+          const newSource = await imageUrlToBase64(imagenes[i].src)
+          console.log(newSource)
+          imagenes[i].src = newSource
+      }
+  }
+
+  const marginX = (window.innerWidth - width) / 2
+
+  console.log('width', width)
+  console.log('window.innerWidth', window.innerWidth)
+  var options = {
+      margin: [0, 0],
+      filename: `${title ? title.textContent : 'page'}.pdf`,
+      image: { type: 'jpeg', quality: 0.88 },
+      html2canvas: {
+        //  width: document.body.scrollWidth, // Full width of the document
+        // windowWidth: document.body.scrollWidth, // Full width of the document
+          allowTaint: true,
+          useCORS: true,
+          dpi: 300
+      },
+      // jsPDF: {
+      // margin: 5, 
+      // format: 'letter', 
+      // orientation: 'portrait'
+      // }
+  }
+  html2pdf().set(options).from(document.body).save().then(() => {
+      chrome.runtime.sendMessage({ action: "processComplete" })
+  })
+}
 
   function call(){
     alert("Hello");

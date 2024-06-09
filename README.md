@@ -24,6 +24,6 @@ AnnotateEase is a Google Chrome extension designed to facilitate annotating webp
 - Choose a highlight color from the palette.
 ### Export to PDF:
 
-Click on the AnnotateEase extension icon in the Chrome toolbar.
-Select "Export to PDF" from the menu.
-A PDF file will be generated with your annotations and downloaded to your computer.
+- Click on the AnnotateEase extension icon in the Chrome toolbar.
+- Select "Convert to PDF" from the popup menu.
+- A PDF file will be generated with your annotations and downloaded to your computer.

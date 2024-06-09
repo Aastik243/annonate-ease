@@ -8,7 +8,13 @@
     "content_scripts": [
       {
         "matches": ["*://*/*"],
-        "js": ["scripts/contentScript.js"],
+        "js": ["jsPDF/es6-promise-auto-min.js",
+                "jsPDF/html2canvas.min.js",
+                "jsPDF/jspdf-html2canvas.min.js",
+                "jsPDF/jspdf.umd.js",
+                "jsPDF/jspdf.umd.min.js",
+                "jsPDF/html2pdf.js",
+                "scripts/contentScript.js"],
         "css":["styles.css"]
         
         
@@ -17,6 +23,9 @@
     "action": {
       "default_title": "AnnotateEase",
       "default_popup": "popup.html"
+    },
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
     }
   }
   
