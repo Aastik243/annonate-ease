@@ -27,16 +27,7 @@ const palette = document.createElement('div');
        
     });
 
-    // document.addEventListener('click', (event) => {
-    //   if (event.target.id === 'delete-button') {
-    //     const note = event.target.closest('.note-page');
-    //     if (note) {
-    //       note.remove();
-    //       removeNoteFromStorage(note);
-    //       event.stopPropagation(); // Stop event propagation to prevent recreation of the note
-    //     }
-    //   }
-    // });
+   
   
     document.body.appendChild(palette);
 
@@ -211,62 +202,7 @@ window.addEventListener("load", () => {
 
 });
 
-function saveHighlightToStorage(highlight) {
-  chrome.storage.local.get('highlights', (result) => {
-    const highlights = result.highlights || [];
-    highlights.push({
-      color: highlight.style.backgroundColor,
-      text: highlight.innerHTML,
-      parentPath: getElementPath(highlight.parentNode),// Save parent HTML
-      offset: Array.from(highlight.parentNode.childNodes).indexOf(highlight)
-    });
-    chrome.storage.local.set({ highlights }, () => {
-      console.log('Highlight saved:', highlights);
-    });
-  });
-  
-}
 
-function restoreHighlights() {
-  chrome.storage.local.get('highlights', (result) => {
-    const highlights = result.highlights || [];
-    highlights.forEach(highlight => {
-      const parent = getElementByPath(highlight.parentPath);
-      if (parent) {
-        const span = document.createElement('span');
-        span.style.backgroundColor = highlight.color;
-        span.innerHTML = highlight.text;
-        
-        const referenceNode = parent.childNodes[highlight.offset];
-        parent.insertBefore(span, referenceNode);
-      }
-    });
-  });
-}
-
-
-  // document.addEventListener('click', (event) => {
-  //   if (isShiftPressed) {
-
-  //    const note = document.createElement('div');
-  //   note.id = 'note-page';
-  //   note.className = 'note-page';
-  //   note.innerHTML = `
-  //       <div class="header">
-  //         <button id="delete-button">X</button>
-  //       </div>
-  //       <textarea></textarea>
-  //   `;
-
-  //    note.style.display = 'block';
-  //    note.style.top = `${event.clientY}px`;
-  //    note.style.left = `${event.clientX}px`;
-
-  //    document.body.appendChild(note);
-
-  //    isShiftPressed = false;
-  //   }
-  // });
   
   function highlightText(color) {
    
@@ -286,47 +222,7 @@ function restoreHighlights() {
   
   
 
-  // function handleDelete() {
-  //   const note = event.target.closest('.note-page');
-  //   if (note) {
-  //     note.remove();
-  //     removeNoteFromStorage(note);
-  //     event.stopPropagation(); 
-  //   }
-  // }
-
-  // Helper function to get the element path
-  function getElementPath(element) {
-    const path = [];
-    while (element && element !== document.body) {  // Ensure the loop stops at the body
-      const parent = element.parentNode;
-      const index = Array.from(parent.childNodes).indexOf(element);
-      path.unshift(index);
-      element = parent;
-    }
-    return path;
-  }
-
-// Helper function to get an element by its path
-function getElementByPath(path) {
-  if (!Array.isArray(path)) {
-    console.error('Invalid path:', path);
-    return null;
-  }
   
-  let element = document.body;
-  for (const index of path) {
-    if (element.childNodes[index]) {
-      element = element.childNodes[index];
-    } else {
-      console.error('Invalid index in path:', index);
-      return null;  // Return null if the path is invalid
-    }
-  }
-  return element;
-}
-
-
 
 
 chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
@@ -434,3 +330,143 @@ const convertPageToPDF = async () => {
   function call(){
     alert("Hello");
   }
+
+
+
+
+  function saveHighlightToStorage(highlight) {
+    chrome.storage.local.get('highlights', (result) => {
+      const highlights = result.highlights || [];
+  
+      highlights.push({
+        color: highlight.style.backgroundColor,
+        text: highlight.textContent,
+        parentPath: getElementPath(highlight.parentNode),
+        startOffset: getTextNodeOffset(highlight),
+        url: window.location.href // Save the URL to filter highlights later
+      });
+  
+      chrome.storage.local.set({ highlights }, () => {
+        console.log('Highlight saved:', highlights);
+      });
+    });
+  }
+  
+  function getTextNodeOffset(node) {
+    let offset = 0;
+    let sibling = node;
+    while ((sibling = sibling.previousSibling) != null) {
+      if (sibling.nodeType === Node.TEXT_NODE) {
+        offset += sibling.textContent.length;
+      }
+    }
+    return offset;
+  }
+
+  function restoreHighlights() {
+    const currentUrl = window.location.href;
+  
+    chrome.storage.local.get('highlights', (result) => {
+      const highlights = result.highlights || [];
+      const filteredHighlights = highlights.filter(highlight => highlight.url === currentUrl);
+  
+      console.log('Restoring highlights for URL:', currentUrl);
+      console.log('Filtered highlights:', filteredHighlights);
+  
+      filteredHighlights.forEach(highlight => {
+        const parent = getElementByPath(highlight.parentPath);
+        if (parent) {
+          const textNodes = getTextNodes(parent);
+          let charIndex = 0;
+          let textNode, startOffset;
+  
+          // Find the text node and the correct offset within it
+          for (let node of textNodes) {
+            if (charIndex + node.textContent.length >= highlight.startOffset) {
+              textNode = node;
+              startOffset = highlight.startOffset - charIndex;
+              break;
+            }
+            charIndex += node.textContent.length;
+          }
+  
+          if (textNode) {
+            const originalText = textNode.textContent;
+            const beforeText = originalText.substring(0, startOffset);
+            const highlightedText = highlight.text;
+            const afterText = originalText.substring(startOffset + highlightedText.length);
+  
+            console.log('Original text:', originalText);
+            console.log('Highlighted text:', highlightedText);
+            console.log('Before text:', beforeText);
+            console.log('After text:', afterText);
+  
+            // Create a span for the highlighted text
+            const span = document.createElement('span');
+            span.style.backgroundColor = highlight.color;
+            span.textContent = highlightedText;
+  
+            // Update the text node
+            textNode.textContent = beforeText + afterText;
+  
+            // Insert the highlighted span
+            const afterNode = document.createTextNode(afterText);
+            parent.insertBefore(afterNode, textNode.nextSibling);
+            parent.insertBefore(span, afterNode);
+          } else {
+            console.error('Text node not found or not a text node:', highlight);
+          }
+        } else {
+          console.error('Parent node not found:', highlight);
+        }
+      });
+    });
+  }
+  
+  function getTextNodes(node) {
+    const textNodes = [];
+    function traverse(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        textNodes.push(node);
+      } else {
+        for (let i = 0; i < node.childNodes.length; i++) {
+          traverse(node.childNodes[i]);
+        }
+      }
+    }
+    traverse(node);
+    return textNodes;
+  }
+  
+  // Helper function to get the element path
+  function getElementPath(element) {
+    const path = [];
+    while (element && element !== document.body) {  // Ensure the loop stops at the body
+      const parent = element.parentNode;
+      const index = Array.from(parent.childNodes).indexOf(element);
+      path.unshift(index);
+      element = parent;
+    }
+    return path;
+  }
+  
+  // Helper function to get an element by its path
+  function getElementByPath(path) {
+    if (!Array.isArray(path)) {
+      console.error('Invalid path:', path);
+      return null;
+    }
+  
+    let element = document.body;
+    for (const index of path) {
+      if (element.childNodes[index]) {
+        element = element.childNodes[index];
+      } else {
+        console.error('Invalid index in path:', index);
+        return null;  // Return null if the path is invalid
+      }
+    }
+    return element;
+  }
+  
+  
